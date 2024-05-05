@@ -4,7 +4,6 @@ export interface ResponseData {
   rowCount: number;
   currentPage: number;
   totalPages: number;
-  headers: string[];
 }
 
 export interface Filter {

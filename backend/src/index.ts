@@ -78,7 +78,6 @@ app.get('/parse/:filename', async (req: Request, res: Response) => {
       rowCount: results.data.length,
       currentPage: filter.page,
       totalPages: Math.ceil(results.rowCount / filter.limit),
-      headers: Object.keys(results.data[0])
     };
     res.json(response)
   } catch (error) {
