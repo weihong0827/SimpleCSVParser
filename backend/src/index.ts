@@ -48,21 +48,36 @@ app.post('/upload', (req: Request, res: Response) => {
 
     try {
       // Process uploaded CSV file asynchronously
-      const results: any[] = await processCSV(req.file.path);
-      res.json({ data: results });
+      const results = await processCSV(req.file.path);
+      res.json(results)
     } catch (error) {
       res.status(500).json({ error: 'Internal server error' });
     }
 
   });
 });
+
 // Parse a previously uploaded CSV file and send back JSON representation
 app.get('/parse/:filename', async (req: Request, res: Response) => {
   try {
     const fileName = req.params.filename + '.csv';
     const filePath = path.join(__dirname, '../uploads', fileName);
-    const results: any[] = await processCSV(filePath);
-    res.json({ data: results });
+
+    const filter: Filter = {
+      searchField: req.query.searchField as string || '',
+      searchValue: req.query.searchValue as string || '',
+      page: parseInt(req.query.page as string) || 1,
+      limit: parseInt(req.query.limit as string) || 10
+    };
+
+    const results: ParseReuslt = await processCSV(filePath, filter);
+    const response: ResponseData = {
+      data: results.data,
+      rowCount: results.data.length,
+      currentPage: filter.page,
+      totalPages: Math.ceil(results.rowCount / filter.limit)
+    };
+    res.json(response)
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -81,14 +96,50 @@ app.get('/listFiles', (req: Request, res: Response) => {
   });
 });
 
-async function processCSV(filePath: string): Promise<any[]> {
+interface ResponseData {
+  data: any[];
+  rowCount: number;
+  currentPage: number;
+  totalPages: number;
+}
+
+interface Filter {
+  searchField: string;
+  searchValue: string;
+  page: number;
+  limit: number;
+}
+
+interface ParseReuslt {
+  data: any[];
+  rowCount: number;
+}
+
+async function processCSV(filePath: string, filter?: Filter): Promise<ParseReuslt> {
   return new Promise((resolve, reject) => {
     const results: any[] = [];
+    let count: number = 0;
     fs.createReadStream(filePath)
       .pipe(csv())
-      .on('data', (data) => results.push(data))
+      .on('data', (data) => {
+        // No filter, add all data
+        if (!filter) {
+          results.push(data);
+          return;
+        }
+        // Apply filter
+        if (
+          filter.searchField === '' ||
+          (data[filter.searchField] && data[filter.searchField].includes(filter.searchValue))
+        ) {
+          count++;
+          if (count > (filter.page - 1) * filter.limit && count <= filter.page * filter.limit) {
+            results.push(data);
+          }
+        }
+      })
       .on('end', () => {
-        resolve(results);
+        resolve({ data: results, rowCount: count })
       })
       .on('error', (error) => {
         reject(error);
