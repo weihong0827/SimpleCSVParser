@@ -4,8 +4,11 @@ import csv from 'csv-parser';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import cors from 'cors';
+import { Filter, ParseReuslt, ResponseData } from './types';
 
 const app = express();
+app.use(cors());
 const port = 8001;
 
 // Set storage engine
@@ -60,8 +63,7 @@ app.post('/upload', (req: Request, res: Response) => {
 // Parse a previously uploaded CSV file and send back JSON representation
 app.get('/parse/:filename', async (req: Request, res: Response) => {
   try {
-    const fileName = req.params.filename + '.csv';
-    const filePath = path.join(__dirname, '../uploads', fileName);
+    const filePath = path.join(__dirname, '../uploads', req.params.filename);
 
     const filter: Filter = {
       searchField: req.query.searchField as string || '',
@@ -75,10 +77,23 @@ app.get('/parse/:filename', async (req: Request, res: Response) => {
       data: results.data,
       rowCount: results.data.length,
       currentPage: filter.page,
-      totalPages: Math.ceil(results.rowCount / filter.limit)
+      totalPages: Math.ceil(results.rowCount / filter.limit),
+      headers: Object.keys(results.data[0])
     };
     res.json(response)
   } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+app.get('/headers/:filename', async (req: Request, res: Response) => {
+  try {
+    const filePath = path.join(__dirname, '../uploads', req.params.filename);
+    // read the first row of the CSV file
+    const results = await readCSVHeader(filePath);
+    res.json({ headers: results })
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -96,25 +111,28 @@ app.get('/listFiles', (req: Request, res: Response) => {
   });
 });
 
-interface ResponseData {
-  data: any[];
-  rowCount: number;
-  currentPage: number;
-  totalPages: number;
-}
 
-interface Filter {
-  searchField: string;
-  searchValue: string;
-  page: number;
-  limit: number;
-}
+function readCSVHeader(filePath: string): Promise<string[]> {
+  return new Promise<string[]>((resolve, reject) => {
+    const headers: string[] = [];
 
-interface ParseReuslt {
-  data: any[];
-  rowCount: number;
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on('headers', (headerList: string[]) => {
+        if (Array.isArray(headerList)) {
+          headerList.forEach(header => {
+            headers.push(header.trim()); // Trim whitespace from headers
+          });
+          resolve(headers);
+        } else {
+          reject(new Error('Headers must be an array of strings'));
+        }
+      })
+      .on('error', (err: NodeJS.ErrnoException) => {
+        reject(err);
+      });
+  });
 }
-
 async function processCSV(filePath: string, filter?: Filter): Promise<ParseReuslt> {
   return new Promise((resolve, reject) => {
     const results: any[] = [];
@@ -146,6 +164,7 @@ async function processCSV(filePath: string, filter?: Filter): Promise<ParseReusl
       });
   });
 }
+
 
 app.listen(port, () => {
   console.log(`Server is listening at http://localhost:${port}`);
