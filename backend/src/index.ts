@@ -60,7 +60,7 @@ app.post('/upload', (req: Request, res: Response) => {
 app.get('/parse/:filename', async (req: Request, res: Response) => {
   try {
     const fileName = req.params.filename + '.csv';
-    const filePath = path.join(__dirname, 'uploads', fileName);
+    const filePath = path.join(__dirname, '../uploads', fileName);
     const results: any[] = await processCSV(filePath);
     res.json({ data: results });
   } catch (error) {
@@ -70,9 +70,10 @@ app.get('/parse/:filename', async (req: Request, res: Response) => {
 
 // list all the files in the uploads directory
 app.get('/listFiles', (req: Request, res: Response) => {
-  const uploadDirectory = path.join(__dirname, 'uploads');
+  const uploadDirectory = path.join(__dirname, '../uploads');
   fs.readdir(uploadDirectory, (err, files) => {
     if (err) {
+      console.error(err);
       res.status(500).json({ error: 'Internal server error' });
     } else {
       res.json({ files: files });
