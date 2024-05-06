@@ -32,9 +32,7 @@ export const getCSVHeader = async (filename: string): Promise<HeaderResponse> =>
 }
 
 
-export const uploadCSV = async (file: File) => {
-  const formData = new FormData();
-  formData.append('csvfile', file);
+export const uploadCSV = async (formData: FormData) => {
   const response = await axios.post('/upload', formData);
   return response.data;
 }

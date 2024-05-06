@@ -13,9 +13,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Loader2 } from "lucide-react"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { getCSVHeader, listCSV, parseFile } from "@/api/csv"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { getCSVHeader, listCSV, parseFile, uploadCSV } from "@/api/csv"
 import { HeaderResponse, ListFilesResponse, Record, ResponseData } from "@/types/csvResponse";
 import { CustomSelect } from "@/components/headerSelect"
 
@@ -23,7 +24,6 @@ import { useDebouncedCallback } from 'use-debounce';
 import { CustomPagination } from "./customPagniation";
 import { Button } from "./ui/button";
 
-import axios from "@/lib/axios"
 
 
 
@@ -46,12 +46,24 @@ export function CSVTable() {
 
       , 300
   });
+
+  const mutation = useMutation(
+    {
+      mutationFn: (data: FormData) => {
+        return uploadCSV(data)
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["listCSV"] })
+      },
+    }
+  )
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     const data = new FormData(event.target as HTMLFormElement)
-    await axios.post('/upload', data)
-    queryClient.invalidateQueries({ queryKey: ["listCSV"] })
+    mutation.mutate(data)
   }
+
 
   return (
     <div className="w-full">
@@ -70,8 +82,16 @@ export function CSVTable() {
         </div>
         <form onSubmit={handleSubmit} className="flex items-center space-x-2">
           <Input type='file' name="csvfile" className="max-w-sm" />
-          <Button
-            type='submit'>Upload</Button>
+          {mutation.isError && <span className="text-destructive">Upload error please try again</span>}
+
+          {mutation.isPending ?
+            <Button disabled>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Uploading...
+            </Button>
+            : <Button
+              type='submit'>Upload</Button>
+          }
         </form>
       </div>
       <div className="rounded-md border">
