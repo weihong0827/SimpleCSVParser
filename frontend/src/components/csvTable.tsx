@@ -14,17 +14,21 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { getCSVHeader, listCSV, parseFile } from "@/api/csv"
 import { HeaderResponse, ListFilesResponse, Record, ResponseData } from "@/types/csvResponse";
-import { HeaderSelect } from "@/components/headerSelect"
+import { CustomSelect } from "@/components/headerSelect"
 
 import { useDebouncedCallback } from 'use-debounce';
 import { CustomPagination } from "./customPagniation";
+import { Button } from "./ui/button";
+
+import axios from "@/lib/axios"
 
 
 
 export function CSVTable() {
+  const queryClient = useQueryClient()
   const { data: csvList } = useQuery<ListFilesResponse>({ queryKey: ["listCSV"], queryFn: listCSV })
   const [selectedCSV, setSelectedCSV] = React.useState<string>("")
   const [filterOptions, setFilterOptions] = React.useState<Filter>({
@@ -42,20 +46,33 @@ export function CSVTable() {
 
       , 300
   });
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const data = new FormData(event.target as HTMLFormElement)
+    await axios.post('/upload', data)
+    queryClient.invalidateQueries({ queryKey: ["listCSV"] })
+  }
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
-        <HeaderSelect headers={csvList?.files ?? []} onSelect={(header) => setSelectedCSV(header)} />
-        <HeaderSelect headers={headerResponse?.headers ?? []} onSelect={(header) => setFilterOptions((prev) => ({ ...prev, searchField: header }))} />
-        <Input
-          placeholder="Content to search for"
-          value={filterOptions.searchValue || ""}
-          onChange={(event) =>
-            debouncedFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
+      <div className="flex flex-col gap-6 py-4">
+        <div className="flex gap-2">
+          <CustomSelect label="File List" list={csvList?.files ?? []} onSelect={(file) => setSelectedCSV(file)} />
+          <CustomSelect label="Header" list={headerResponse?.headers ?? []} onSelect={(header) => setFilterOptions((prev) => ({ ...prev, searchField: header }))} />
+          <Input
+            placeholder="Content to search for"
+            value={filterOptions.searchValue || ""}
+            onChange={(event) =>
+              debouncedFilterValue(event.target.value)
+            }
+            className="max-w-sm"
+          />
+        </div>
+        <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+          <Input type='file' name="csvfile" className="max-w-sm" />
+          <Button
+            type='submit'>Upload</Button>
+        </form>
       </div>
       <div className="rounded-md border">
         <Table>

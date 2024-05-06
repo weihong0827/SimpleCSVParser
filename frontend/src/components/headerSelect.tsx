@@ -11,18 +11,18 @@ import {
 } from "@/components/ui/select"
 
 
-export function HeaderSelect({ headers, onSelect }: { headers: string[], onSelect: (header: string) => void }) {
+export function CustomSelect({ list, onSelect, label }: { list: string[], onSelect: (item: string) => void, label?: string }) {
   return (
     <Select onValueChange={onSelect}>
       <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Select a header" />
+        <SelectValue placeholder={label} />
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
-          <SelectLabel>Headers</SelectLabel>
-          {headers.map((header) => (
-            <SelectItem key={header} value={header}>
-              {header}
+          <SelectLabel>{label}</SelectLabel>
+          {list.map((item) => (
+            <SelectItem key={item} value={item}>
+              {item}
             </SelectItem>
           ))}
 
