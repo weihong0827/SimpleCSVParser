@@ -1,5 +1,5 @@
 
-interface Record {
+export interface Record {
   [key: string]: string;
 }
 export interface ResponseData {
