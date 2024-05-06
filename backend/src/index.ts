@@ -64,6 +64,9 @@ app.post('/upload', (req: Request, res: Response) => {
 app.get('/parse/:filename', async (req: Request, res: Response) => {
   try {
     const filePath = path.join(__dirname, '../uploads', req.params.filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
 
     const filter: Filter = {
       searchField: req.query.searchField as string || '',
@@ -71,6 +74,7 @@ app.get('/parse/:filename', async (req: Request, res: Response) => {
       page: parseInt(req.query.page as string) || 1,
       limit: parseInt(req.query.limit as string) || 10
     };
+    console.log('filter', filter)
 
     const results: ParseReuslt = await processCSV(filePath, filter);
     const response: ResponseData = {
@@ -81,13 +85,15 @@ app.get('/parse/:filename', async (req: Request, res: Response) => {
     };
     res.json(response)
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 app.get('/headers/:filename', async (req: Request, res: Response) => {
   try {
     const filePath = path.join(__dirname, '../uploads', req.params.filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
     // read the first row of the CSV file
     const results = await readCSVHeader(filePath);
     res.json({ headers: results })
@@ -165,6 +171,8 @@ async function processCSV(filePath: string, filter?: Filter): Promise<ParseReusl
 }
 
 
-app.listen(port, () => {
+export const server = app.listen(port, () => {
   console.log(`Server is listening at http://localhost:${port}`);
 });
+
+export default app;
