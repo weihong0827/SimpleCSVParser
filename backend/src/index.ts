@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import csv from 'csv-parser';
 import fs from 'fs';
+import * as csv from 'fast-csv';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import cors from 'cors';
@@ -116,7 +116,7 @@ function readCSVHeader(filePath: string): Promise<string[]> {
     const headers: string[] = [];
 
     fs.createReadStream(filePath)
-      .pipe(csv())
+      .pipe(csv.parse({ headers: true }))
       .on('headers', (headerList: string[]) => {
         if (Array.isArray(headerList)) {
           headerList.forEach(header => {
@@ -137,7 +137,7 @@ async function processCSV(filePath: string, filter?: Filter): Promise<ParseReusl
     const results: any[] = [];
     let count: number = 0;
     fs.createReadStream(filePath)
-      .pipe(csv())
+      .pipe(csv.parse({ headers: true }))
       .on('data', (data) => {
         // No filter, add all data
         if (!filter) {
